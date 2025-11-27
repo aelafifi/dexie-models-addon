@@ -1,7 +1,7 @@
-import DexieDB from "./DexieDB.ts";
+import DexieModelsAddon from "./addons";
 
-export * from "./decorators.ts";
-export { default as DexieModel } from "./DexieModel.ts";
-export type * from "./types.ts";
+export * from "./decorators";
+export { default as DexieModel } from "./DexieModel";
+export type * from "./types";
 
-export default DexieDB;
+export default DexieModelsAddon;

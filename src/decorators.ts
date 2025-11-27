@@ -1,5 +1,5 @@
-import DexieModel from "./DexieModel.ts";
-import type { PreFilterFn, RelationThrough } from "./types.ts";
+import DexieModel from "./DexieModel";
+import type { PreFilterFn, RelationThrough } from "./types";
 
 function ensureIsDexieModel(target) {
   if (!(target instanceof DexieModel)) {

@@ -1,4 +1,4 @@
-import { Collection } from "dexie";
+import { type Collection } from "dexie";
 import { type CollectionChain } from "lodash";
 
 export interface RelationThrough {

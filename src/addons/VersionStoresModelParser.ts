@@ -1,12 +1,6 @@
-import Dexie from "dexie";
+import type Dexie from "dexie";
 import type { Version } from "dexie";
-import type DexieModel from "../DexieModel.ts";
-
-declare module "dexie" {
-  interface Version {
-    models(...models: (typeof DexieModel)[]): Version;
-  }
-}
+import type DexieModel from "../DexieModel";
 
 export default function VersionStoresModelParser(db: Dexie) {
   db.Version.prototype.models = function (

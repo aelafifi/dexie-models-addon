@@ -2,26 +2,36 @@
   "name": "dexie-models-addon",
   "version": "0.0.1",
   "description": "A Dexie.js addon for managing data models (with relationships)",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rollup -c",
+    "eslint": "eslint"
+  },
+  "dependencies": {
+    "dexie": "^4.2.1",
+    "lodash": "^4.17.21",
+    "rollup-plugin-typescript2": "^0.36.0"
   },
   "peerDependencies": {
     "dexie": "^4.2.1"
   },
   "devDependencies": {
-    "@rollup/plugin-buble": "^1.0.3",
     "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^12.3.0",
-    "dexie": "^4.2.1",
+    "@types/lodash": "^4.17.21",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
     "eslint": "^9.39.1",
     "prettier": "^3.6.2",
     "rollup": "^4.53.3",
-    "rollup-plugin-sourcemaps": "^0.6.3",
-    "typescript": "^5.9.3",
-    "uglify-js": "^3.19.3"
+    "typescript": "^5.9.3"
   },
+  "type": "module",
   "keywords": [
     "dexie",
     "relationships",

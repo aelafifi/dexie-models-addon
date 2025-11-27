@@ -1,20 +1,19 @@
-import type { RelationType, Withable } from "./types.ts";
-import type { Table } from "dexie";
-import Dexie, { Entity } from "dexie";
+import type { RelationType, Withable } from "./types";
+import Dexie, { Entity, type Table } from "dexie";
 
 // TODO: check if Entity<InstanceType<this>> would work as expected
 export default class DexieModel<
-  TModel extends typeof Entity,
-  TKeyPropName,
-  TSchema,
+  TModel extends typeof Entity = any,
+  TKeyPropName = unknown,
+  TSchema = unknown,
   TThrough extends typeof DexieModel = any,
 > extends Entity {
-  static __pk!: string;
+  static __pk: string;
   static __indices: string[] = [];
   static __relations: Record<string, RelationType> = {};
   static __compounds: string[] = [];
 
-  static __tableName!: string;
+  static __tableName: string;
 
   __through?: TThrough;
 
@@ -22,7 +21,7 @@ export default class DexieModel<
     return this.db;
   }
 
-  get _table(): Table<TModel, TKeyPropName, TSchema> {
+  get _table(): Table {
     return this.db[this.table()];
   }
 
@@ -34,7 +33,7 @@ export default class DexieModel<
     return [this.__pk ?? "", ...this.__indices, ...this.__compounds];
   }
 
-  public async with(_with: Withable | string | string[]): Promise<this> {
+  public async with(_with: Withable | string | string[]): Promise<typeof this> {
     if (!Array.isArray(_with) && typeof _with !== "string") {
       const allValid = Object.values(_with).map(
         (w) => typeof w === "boolean" || !w.inner,

@@ -1,16 +1,25 @@
-import buble from "@rollup/plugin-buble";
-import sourcemaps from "rollup-plugin-sourcemaps";
-import typescript from "@rollup/plugin-typescript";
+import typescript from "rollup-plugin-typescript2";
+import terser from "@rollup/plugin-terser";
 
 export default {
-  moduleName: "dexieRelationships",
-  entry: "src/index.js",
-  format: "umd",
-  dest: "dist/index.js",
-  sourceMap: true,
-  external: ["dexie"],
-  globals: {
-    dexie: "Dexie",
-  },
-  plugins: [typescript(), buble(), sourcemaps()],
+  input: "src/index.ts",
+  output: [
+    { file: "dist/index.js", format: "esm" },
+    { file: "dist/index.cjs", format: "cjs" },
+    { file: "dist/index.min.js", format: "esm", plugins: [terser()] },
+    { file: "dist/index.min.cjs", format: "cjs", plugins: [terser()] },
+  ],
+  external: ["dexie", "lodash"],
+  plugins: [
+    typescript({
+      tsconfigOverride: {
+        compilerOptions: {
+          declaration: true,
+          declarationDir: "dist/types",
+          sourceMap: true,
+        },
+      },
+      useTsconfigDeclarationDir: true,
+    }),
+  ],
 };

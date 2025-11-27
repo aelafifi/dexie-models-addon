@@ -1,4 +1,4 @@
-import Dexie from "dexie";
+import type Dexie from "dexie";
 import VersionStoresModelParser from "./VersionStoresModelParser";
 import RelationshipsAddon from "./RelationshipsAddon";
 

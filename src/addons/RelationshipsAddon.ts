@@ -1,23 +1,8 @@
-import type { Collection, Table } from "dexie";
-import Dexie from "dexie";
+import { type Collection, Entity, type Table } from "dexie";
+import type Dexie from "dexie";
 import type DexieModel from "../DexieModel";
 import type { RelationType, Withable, WithableOptions } from "../types";
-import * as _ from "lodash";
-
-declare module "dexie" {
-  interface Table<TModel> {
-    with(_with: Withable | string | string[]): Promise<TModel[]>;
-
-    __applyWith(
-      _with: Withable | string | string[],
-      getData: () => Promise<TModel[]>,
-    ): Promise<TModel[]>;
-  }
-
-  interface Collection<TModel> {
-    with(_with: Withable | string | string[]): Promise<TModel[]>;
-  }
-}
+import * as lodash from "lodash";
 
 export default function RelationshipsAddon(db: Dexie) {
   db.Table.prototype.with = async function (
@@ -36,10 +21,11 @@ export default function RelationshipsAddon(db: Dexie) {
     _with = __parseWithable(_with);
     const modelCls = this.schema.mappedClass as typeof DexieModel;
 
-    const relationships = _.chain(_with)
+    const relationships = lodash
+      .chain(_with)
       .entries()
       .filter(([, v]) => v !== false)
-      .map<[string, WithableOptions]>(([k, v]) => [k, v === true ? {} : v])
+      .map<[string, WithableOptions]>(([k, v]: any) => [k, v === true ? {} : v])
       .map<[RelationType, WithableOptions]>(([k, v]) => {
         if (!Object.keys(modelCls.__relations).includes(k)) {
           throw new Error(
@@ -106,7 +92,9 @@ async function __getRelevantData<T>(
   const results = opts.with
     ? await collection.with(opts.with)
     : await collection.toArray();
-  return opts.postFilter ? opts.postFilter(_.chain(results)).value() : results;
+  return opts.postFilter
+    ? opts.postFilter(lodash.chain(results)).value()
+    : results;
 }
 
 function toList<T>(v: T | T[]): T[] {
@@ -116,7 +104,7 @@ function toList<T>(v: T | T[]): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
-function pairsGroupsReducer<T, K>(
+function pairsGroupsReducer<T extends keyof any, K>(
   acc: Record<T, K[]>,
   [k, v]: [T, K],
 ): Record<T, K[]> {
@@ -125,14 +113,14 @@ function pairsGroupsReducer<T, K>(
   return acc;
 }
 
-async function __join<T extends DexieModel>(
+async function __join<T extends typeof Entity>(
   table: Table<T>,
   data: T[],
   rel: RelationType,
   opts: WithableOptions,
 ) {
   const modelCls = table.schema.mappedClass as typeof DexieModel;
-  const dataByPK = _.keyBy(data, modelCls.__pk);
+  const dataByPK = lodash.keyBy(data, modelCls.__pk);
   const singleValue = rel.forward && !rel.multi;
   const results = await __getRelevantData(table.db, data, rel, opts);
 
@@ -144,7 +132,7 @@ async function __join<T extends DexieModel>(
       toList(item[rel.localField]).map((_local) => [_local, item]),
     )
     // Group by localField value
-    .reduce(pairsGroupsReducer, {});
+    .reduce(pairsGroupsReducer as any, {});
 
   // Group target data by targetField
   const g2 = results
@@ -154,14 +142,15 @@ async function __join<T extends DexieModel>(
       toList(item[rel.targetField]).map((_local) => [_local, item]),
     )
     // Group by localField value
-    .reduce(pairsGroupsReducer, {});
+    .reduce(pairsGroupsReducer as any, {});
 
   // Find common keys between g1 and g2
   // Only these actually have related data
-  const commonKeys = _.intersection(_.keys(g1), _.keys(g2));
+  const commonKeys = lodash.intersection(lodash.keys(g1), lodash.keys(g2));
 
   // Build assignment map from local PK value to target data
-  const assignMap = _.chain(commonKeys)
+  const assignMap = lodash
+    .chain(commonKeys)
     // For each common key, create all combinations of items from local and target
     // Result: Array<[local records array of k, target records array of k]>
     .map((k) => [g1[k], g2[k]])
@@ -172,7 +161,7 @@ async function __join<T extends DexieModel>(
     .map(([a, b]) => [a[modelCls.__pk], b])
     // Group by local PK value
     // Result: Record<local PK value, target records array>
-    .reduce(pairsGroupsReducer, {})
+    .reduce(pairsGroupsReducer as any, {})
     // Finally, map values to single or multiple based on relation type
     .mapValues((v) => (singleValue ? (v[0] ?? null) : v))
     .value();
@@ -191,7 +180,7 @@ async function __join<T extends DexieModel>(
   return data;
 }
 
-async function __joinThrough<T extends DexieModel>(
+async function __joinThrough<T extends typeof Entity>(
   table: Table<T>,
   data: T[],
   rel: RelationType,
@@ -224,11 +213,11 @@ async function __joinThrough<T extends DexieModel>(
     ? await targetDataCollection.with(opts.with)
     : await targetDataCollection.toArray();
   const targetData = opts.postFilter
-    ? opts.postFilter(_.chain(initialTargetData)).value()
+    ? opts.postFilter(lodash.chain(initialTargetData)).value()
     : initialTargetData;
 
-  const localDataByLocalField = _.keyBy(data, rel.localField);
-  const targetDataByTargetField = _.keyBy(targetData, rel.targetField);
+  const localDataByLocalField = lodash.keyBy(data, rel.localField);
+  const targetDataByTargetField = lodash.keyBy(targetData, rel.targetField);
 
   // Set initial values
   for (const item of data) {
@@ -248,7 +237,7 @@ async function __joinThrough<T extends DexieModel>(
     if (rel.through!.ignoreThrough) {
       localItem[rel.propertyKey].push(targetItem);
     } else {
-      const targetItemClone = _.clone<DexieModel>(targetItem);
+      const targetItemClone = lodash.clone<DexieModel>(targetItem);
       targetItemClone.__through = pivotItem;
       localItem[rel.propertyKey].push(targetItemClone);
     }
@@ -267,7 +256,7 @@ function __parseWithable(_with: string | string[] | Withable): Withable {
     const addPath = (target: Withable, path: string[]): Withable => {
       if (path.length > 0) {
         const [head, ...tail] = path;
-        const [, _head, _inner] = head.match(/^(.*?)(!?)$/);
+        const [, _head, _inner] = head.match(/^(.*?)(!?)$/)!;
         const withInner = _inner ? { inner: true } : {};
         if (!target[_head]) {
           target[_head] =
