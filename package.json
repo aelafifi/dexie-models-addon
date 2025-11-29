@@ -1,6 +1,6 @@
 {
   "name": "dexie-models-addon",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A Dexie.js addon for managing data models (with relationships)",
   "exports": {
     ".": {

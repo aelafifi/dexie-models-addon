@@ -19,7 +19,7 @@ function ensureProp(obj, prop, init) {
 export const PrimaryKey = (target: object, propertyKey: string) => {
   ensureIsDexieModel(target);
   const modelCls = target.constructor as typeof DexieModel;
-  modelCls.__pk = propertyKey;
+  modelCls.__pk = "@" + propertyKey;
 };
 
 export const Index = (target: object, propertyKey: string) => {
