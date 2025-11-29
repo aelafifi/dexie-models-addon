@@ -1,18 +1,18 @@
-import { type Collection, Entity, type Table } from "dexie";
 import type Dexie from "dexie";
+import { type Collection, Entity, type Table } from "dexie";
 import type DexieModel from "../DexieModel";
 import type { RelationType, Withable, WithableOptions } from "../types";
 import * as lodash from "lodash";
 
 export default function RelationshipsAddon(db: Dexie) {
-  db.Table.prototype.with = async function (
+  (db.Table.prototype as any).with = async function (
     this: Table,
     _with: Withable | string | string[],
   ) {
     return await this.toCollection().with(_with);
   };
 
-  db.Table.prototype.__applyWith = async function <TModel>(
+  (db.Table.prototype as any).__applyWith = async function <TModel>(
     this: Table,
     _with: Withable | string | string[],
     getData: () => Promise<TModel[]>,
@@ -21,11 +21,11 @@ export default function RelationshipsAddon(db: Dexie) {
     _with = __parseWithable(_with);
     const modelCls = this.schema.mappedClass as typeof DexieModel;
 
-    const relationships = lodash
-      .chain(_with)
-      .entries()
+    const relationships = Object.entries(_with)
       .filter(([, v]) => v !== false)
-      .map<[string, WithableOptions]>(([k, v]: any) => [k, v === true ? {} : v])
+      .map<[string, WithableOptions]>(
+        ([k, v]: [string, WithableOptions | true]) => [k, v === true ? {} : v],
+      )
       .map<[RelationType, WithableOptions]>(([k, v]) => {
         if (!Object.keys(modelCls.__relations).includes(k)) {
           throw new Error(
@@ -33,8 +33,7 @@ export default function RelationshipsAddon(db: Dexie) {
           );
         }
         return [modelCls.__relations[k], v];
-      })
-      .value();
+      });
 
     let data = await getData();
     await Promise.all(
@@ -63,7 +62,7 @@ export default function RelationshipsAddon(db: Dexie) {
     return data;
   };
 
-  db.Collection.prototype.with = async function (
+  (db.Collection.prototype as any).with = async function (
     this: Collection,
     _with: Withable | string | string[],
   ) {
@@ -113,7 +112,7 @@ function pairsGroupsReducer<T extends keyof any, K>(
   return acc;
 }
 
-async function __join<T extends typeof Entity>(
+async function __join<T extends Entity>(
   table: Table<T>,
   data: T[],
   rel: RelationType,
@@ -180,24 +179,29 @@ async function __join<T extends typeof Entity>(
   return data;
 }
 
-async function __joinThrough<T extends typeof Entity>(
+async function __joinThrough<T extends Entity>(
   table: Table<T>,
   data: T[],
   rel: RelationType,
   opts: WithableOptions,
 ) {
   const localFieldValues = data.map((item) => item[rel.localField]);
-  const pivotData = await table.db
+  let pivotDataCollection = table.db
     .table(rel.through!.pivotTable)
     .where(rel.through!.localField)
     .anyOf(localFieldValues)
-    .distinct()
-    .toArray();
+    .distinct();
+
+  if (rel.through!.filter) {
+    pivotDataCollection = rel.through.filter(pivotDataCollection);
+  }
+
+  const pivotData = await pivotDataCollection.toArray();
 
   const pivotTargetFieldValues = pivotData.map(
     (pd) => pd[rel.through!.targetField],
   );
-  let targetDataCollection = await table.db
+  let targetDataCollection = table.db
     .table(rel.targetTable)
     .where(rel.targetField)
     .anyOf(pivotTargetFieldValues)
@@ -206,9 +210,11 @@ async function __joinThrough<T extends typeof Entity>(
   if (rel.filter) {
     targetDataCollection = rel.filter(targetDataCollection);
   }
+
   if (opts.preFilter) {
     targetDataCollection = opts.preFilter(targetDataCollection);
   }
+
   const initialTargetData = opts.with
     ? await targetDataCollection.with(opts.with)
     : await targetDataCollection.toArray();

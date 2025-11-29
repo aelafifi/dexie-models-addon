@@ -1,13 +1,11 @@
 import type { RelationType, Withable } from "./types";
-import Dexie, { Entity, type Table } from "dexie";
+import Dexie, { Entity, EntityTable, type Table } from "dexie";
 
 // TODO: check if Entity<InstanceType<this>> would work as expected
-export default class DexieModel<
-  TModel extends typeof Entity = any,
-  TKeyPropName = unknown,
-  TSchema = unknown,
-  TThrough extends typeof DexieModel = any,
-> extends Entity {
+// TODO: allow combined primary key
+// TODO: allow unique multi indices (i.e. `&*index`)
+// TODO: allow nested keyPath as index (i.e. `address.city`)
+export default class DexieModel extends Entity {
   static __pk: string;
   static __indices: string[] = [];
   static __relations: Record<string, RelationType> = {};
@@ -15,7 +13,7 @@ export default class DexieModel<
 
   static __tableName: string;
 
-  __through?: TThrough;
+  __through?: any;
 
   get _db(): Dexie {
     return this.db;
@@ -33,7 +31,7 @@ export default class DexieModel<
     return [this.__pk ?? "", ...this.__indices, ...this.__compounds];
   }
 
-  public async with(_with: Withable | string | string[]): Promise<typeof this> {
+  public async with(_with: Withable | string | string[]): Promise<this> {
     if (!Array.isArray(_with) && typeof _with !== "string") {
       const allValid = Object.values(_with).map(
         (w) => typeof w === "boolean" || !w.inner,

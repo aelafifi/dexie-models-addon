@@ -4,18 +4,24 @@
   "description": "A Dexie.js addon for managing data models (with relationships)",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
     }
   },
   "scripts": {
-    "build": "rollup -c",
+    "bundle": "rm -Rf dist && rollup -c",
+    "build": "rm -Rf dist && tsc",
+    "link": "npm link && echo \"npm link dexie-models-addon\"",
     "eslint": "eslint"
   },
   "dependencies": {
     "dexie": "^4.2.1",
     "lodash": "^4.17.21",
+    "reflect-metadata": "^0.2.2",
     "rollup-plugin-typescript2": "^0.36.0"
   },
   "peerDependencies": {
@@ -29,6 +35,7 @@
     "eslint": "^9.39.1",
     "prettier": "^3.6.2",
     "rollup": "^4.53.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "type": "module",

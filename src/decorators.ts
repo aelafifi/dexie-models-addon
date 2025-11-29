@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import DexieModel from "./DexieModel";
 import type { PreFilterFn, RelationThrough } from "./types";
 
@@ -14,6 +15,7 @@ function ensureProp(obj, prop, init) {
   return obj[prop];
 }
 
+// FIXME: should support multiple primary keys (compound keys)
 export const PrimaryKey = (target: object, propertyKey: string) => {
   ensureIsDexieModel(target);
   const modelCls = target.constructor as typeof DexieModel;
@@ -170,9 +172,6 @@ export const LinkThrough = (
   through: RelationThrough,
   filter?: PreFilterFn,
 ): PropertyDecorator => {
-  // TODO: in the docs, mention that when the user uses the with through logic,
-  //       they can nest with the target table, but to way to nest with pivot.
-  //       If it's needed to nest with pivot use a double joins, and refine the output manually!
   return (target: object, propertyKey: string) => {
     ensureIsDexieModel(target);
     const modelCls = target.constructor as typeof DexieModel;
@@ -197,30 +196,15 @@ export const LinkThrough = (
  *   - `field <- TargetTable.targetField`  (Backlink)
  *   - `field[] -> TargetTable.targetField`  (MultiLinkTo)
  *   - `field <- TargetTable.targetField[]`  (MultiBacklink)
+ *   - `field <- PivotTable[!].pivotField|pivotTargetField -> TargetTable.targetField`  (LinkThrough)
  */
-export const Relationship = (pattern: string, filter?: PreFilterFn) => {
+export const Relationship = (
+  pattern: string,
+  filter?: PreFilterFn,
+  throughFilter?: PreFilterFn,
+) => {
   pattern = pattern.trim();
   let match;
-
-  const LINK_TO_REGEX = /^(\w+)\s*->\s*(\w+)\.(\w+)$/;
-  if ((match = pattern.match(LINK_TO_REGEX))) {
-    return LinkTo(match[1], match[2], match[3], filter);
-  }
-
-  const BACKLINK_REGEX = /^(\w+)\s*<-\s*(\w+)\.(\w+)$/;
-  if ((match = pattern.match(BACKLINK_REGEX))) {
-    return Backlink(match[1], match[2], match[3], filter);
-  }
-
-  const MULTI_LINK_TO_REGEX = /^(\w+)\[]\s*->\s*(\w+)\.(\w+)$/;
-  if ((match = pattern.match(MULTI_LINK_TO_REGEX))) {
-    return MultiLinkTo(match[1], match[2], match[3], filter);
-  }
-
-  const MULTI_BACKLINK_REGEX = /^(\w+)\s*<-\s*(\w+)\.(\w+)\[]$/;
-  if ((match = pattern.match(MULTI_BACKLINK_REGEX))) {
-    return MultiBacklink(match[1], match[2], match[3], filter);
-  }
 
   /**
    * e.g., at StudentModel:
@@ -246,9 +230,36 @@ export const Relationship = (pattern: string, filter?: PreFilterFn) => {
         localField: match[4],
         targetField: match[5],
         ignoreThrough: !!match[3],
+        filter: throughFilter,
       },
       filter,
     );
+  }
+
+  if (throughFilter) {
+    throw new Error(
+      "Through filter provided but relationship pattern is not a link-through relationship.",
+    );
+  }
+
+  const LINK_TO_REGEX = /^(\w+)\s*->\s*(\w+)\.(\w+)$/;
+  if ((match = pattern.match(LINK_TO_REGEX))) {
+    return LinkTo(match[1], match[2], match[3], filter);
+  }
+
+  const BACKLINK_REGEX = /^(\w+)\s*<-\s*(\w+)\.(\w+)$/;
+  if ((match = pattern.match(BACKLINK_REGEX))) {
+    return Backlink(match[1], match[2], match[3], filter);
+  }
+
+  const MULTI_LINK_TO_REGEX = /^(\w+)\[]\s*->\s*(\w+)\.(\w+)$/;
+  if ((match = pattern.match(MULTI_LINK_TO_REGEX))) {
+    return MultiLinkTo(match[1], match[2], match[3], filter);
+  }
+
+  const MULTI_BACKLINK_REGEX = /^(\w+)\s*<-\s*(\w+)\.(\w+)\[]$/;
+  if ((match = pattern.match(MULTI_BACKLINK_REGEX))) {
+    return MultiBacklink(match[1], match[2], match[3], filter);
   }
 
   throw new Error(`Invalid relationship pattern: ${pattern}`);

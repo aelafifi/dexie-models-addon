@@ -1,9 +1,8 @@
-import type Dexie from "dexie";
-import type { Version } from "dexie";
+import Dexie, { Version } from "dexie";
 import type DexieModel from "../DexieModel";
 
 export default function VersionStoresModelParser(db: Dexie) {
-  db.Version.prototype.models = function (
+  (db.Version.prototype as any).models = function (
     this: Version,
     ...models: (typeof DexieModel)[]
   ) {

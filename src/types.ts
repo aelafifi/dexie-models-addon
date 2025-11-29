@@ -6,6 +6,7 @@ export interface RelationThrough {
   localField: string;
   targetField: string;
   ignoreThrough?: boolean;
+  filter?: PreFilterFn;
 }
 
 export interface RelationType {
